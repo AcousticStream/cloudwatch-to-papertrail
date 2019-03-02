@@ -1,68 +1,13 @@
 var zlib = require('zlib');
 var winston = require('winston');
 var papertrailTransport = require('winston-papertrail').Papertrail;
-var dogapi = require('dogapi');
 var config = require('./env.json');
-
-function addLambdaMetrics(data, match) {
-  var now = dogapi.now();
-
-  data.push({
-    metric: 'aws.lambda.billed',
-    points: [
-      [now, match[1]]
-    ]
-  });
-
-  data.push({
-    metric: 'aws.lambda.maxmemory',
-    points: [
-      [now, match[2]]
-    ]
-  });
-};
-
-function addAppMetrics(data, match) {
-  var now = parseInt((new Date(match[1])).getTime()/1000);
-
-  var tags = [];
-  var points = [];
-
-  match[3].split(' ').forEach(function (metric) {
-    var keyValue = metric.split('=');
-
-    if (keyValue[0].indexOf('metric#') == -1) {
-      return;
-    }
-
-    if (keyValue[0].indexOf('metric#tag#') != -1) {
-      return tags.push(keyValue[0].replace('metric#tag#', '') + ':' + keyValue[1]);
-    }
-
-    points.push({
-      metric: [config.appname, config.program, match[2], keyValue[0].replace('metric#', '')].join('.'),
-      points: [
-        [now, parseInt(keyValue[1])]
-      ]
-    });
-  });
-
-  points.forEach(function (item) {
-    item.tags = tags;
-    data.push(item);
-  });
-};
 
 const logger = new winston.Logger({
   transports: []
 });
 
 exports.logger = logger;
-exports.dogapi = dogapi;
-
-dogapi.initialize({
-  api_key: config.datadog
-});
 
 logger.add(papertrailTransport, {
   host: config.host,
@@ -75,52 +20,20 @@ logger.add(papertrailTransport, {
   }
 });
 
-exports.handler = function (event, context, cb) {
-  context.callbackWaitsForEmptyEventLoop = config.waitForFlush;
-
-  var payload = new Buffer(event.awslogs.data, 'base64');
-
-  zlib.gunzip(payload, function (err, result) {
-    if (err) {
-      return cb(err);
-    }
-
-    var data = JSON.parse(result.toString('utf8'));
-
-    var metricRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)\ -\ info:\ ([a-z-]+):.*?(metric#.*)+$/;
-    var reportRegex = /^REPORT\ RequestId.*Billed\ Duration:\ ([0-9]+)\ ms.*Used:\ ([0-9]+)\ MB$/;
-
-    var metricPoints = [];
-    var reportPoints = [];
-
-    data.logEvents.forEach(function (line) {
-      logger.info(line.message);
-
-      if (config.datadog !== '') {
-        var metricMatch = line.message.trim().match(metricRegex);
-
-        if (metricMatch != null) {
-          return addAppMetrics(metricPoints, metricMatch);
+exports.handler = function(input, context) {
+    var payload = new Buffer(input.awslogs.data, 'base64');
+    zlib.gunzip(payload, function(e, result) {
+        if (e) {
+            context.fail(e);
+        } else {
+            result = JSON.parse(result.toString('ascii'));
+            var eventLength = result.logEvents.length;
+            //logger.info("got event");
+            for (var i = 0; i < eventLength; i++) {
+                //logger.info("loop:" + i);
+                logger.info(result.logEvents[i].message);
+            }
+            context.succeed();
         }
-
-        var reportMatch = line.message.trim().match(reportRegex);
-
-        if (reportMatch != null) {
-          return addLambdaMetrics(reportPoints, reportMatch);
-        }
-      }
     });
-
-    if (config.datadog === '') {
-      logger.close();
-      return cb();
-    }
-
-    dogapi.metric.send_all(metricPoints, function () {
-      dogapi.metric.send_all(reportPoints, function () {
-        logger.close();
-        cb();
-      });
-    });
-  });
 };

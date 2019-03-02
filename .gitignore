@@ -39,3 +39,8 @@ jspm_packages
 # Custom
 code.zip
 env.json
+
+.idea
+*.iml
+
+package-lock.json
