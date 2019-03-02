@@ -43,7 +43,6 @@ Next from within the source directory run the following:
 ```bash
 $ export AWS_DEFAULT_REGION=us-east-1
 $ export HOST=logs.papertrailapp.com PORT=1234
-$ export DATADOG=1234567890abcdef1234567890abcdef12345678
 $ APP=helium PROGRAM=lambda LOG_GROUP=/aws/lambda/helium_transform make
 ```
 
@@ -51,7 +50,6 @@ To update existing lambda function:
 
 ```bash
 $ export HOST=logs.papertrailapp.com PORT=1234
-$ export DATADOG=1234567890abcdef1234567890abcdef12345678
 $ APP=helium PROGRAM=lambda make deploy
 ```
 
