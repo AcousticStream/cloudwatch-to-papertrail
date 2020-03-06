@@ -28,7 +28,7 @@ Lambda to send logs from Cloudwatch to Papertrail. Relays each message from the 
         }
     ]
 }
-``` 
+```
 
 
 ## Requires
@@ -36,7 +36,7 @@ Lambda to send logs from Cloudwatch to Papertrail. Relays each message from the 
 
 ## Usage
 
-First, ensure an IAM role exists called `lambda_basic_execution`,
+First, ensure an IAM role exists called `iam-role-lambda-basic`,
 with the `AWSLambdaBasicExecutionRole` policy.
 
 Next from within the source directory run the following:

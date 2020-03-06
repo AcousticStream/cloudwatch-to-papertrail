@@ -25,10 +25,10 @@ create-zip:
 lambda: deps env create-zip
 	aws lambda create-function --publish \
 	--function-name $(APP)-$(PROGRAM)-to-papertrail \
-	--runtime nodejs8.10 \
+	--runtime nodejs12.x \
 	--handler index.handler \
 	--zip-file fileb://code.zip \
-	--role arn:aws:iam::$(ACCOUNT_ID):role/lambda_basic_execution
+	--role arn:aws:iam::$(ACCOUNT_ID):role/iam-role-lambda-basic
 
 deploy: deps env create-zip
 	aws lambda update-function-code --publish \
